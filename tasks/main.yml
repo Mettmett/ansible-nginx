@@ -1,0 +1,88 @@
+---
+
+- name: (sys) update host apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: (sys) install sys tools
+  apt:
+    name: "{{ item }}"
+    state: present
+    install_recommends: false
+  loop:
+    - ca-certificates
+    - curl
+    - gnupg2
+    - lsb-release
+
+- name: (sys DEBIAN) install Debian archive keyring
+  apt:
+    name: "debian-archive-keyring"
+    state: present
+    install_recommends: false
+  when: ansible_facts['distribution'] == "Debian"
+
+- name: (sys UBUNTU) install Ubuntu archive keyring
+  apt:
+    name: "ubuntu-keyring"
+    state: present
+    install_recommends: false
+  when: ansible_facts['distribution'] == "Ubuntu"
+
+- name: (build) add apt signing key
+  shell: "curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null"
+  changed_when: false
+
+- name: (sys DEBIAN) install repository file
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/debian {{ ansible_facts['distribution_release'] | lower() }} nginx"
+    state: present
+    filename: nginx
+  when: ansible_facts['distribution'] == "Debian"
+
+- name: (sys UBUNTU) install install repository file
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/mainline/ubuntu {{ ansible_facts['distribution_release'] | lower() }} nginx"
+    state: present
+    filename: nginx
+  when: ansible_facts['distribution'] == "Ubuntu"
+
+- name: (sys) force usage of nginx repos instead of distribution repos
+  shell: 'echo "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" | sudo tee /etc/apt/preferences.d/99nginx'
+  changed_when: false
+
+- name: (sys) new update host apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: (sys) install nginx server
+  apt:
+    name: "nginx"
+    state: present
+    install_recommends: false
+
+- name: (nginx) create or update nginx folder logs
+  file:
+    path: "/var/log/nginx"
+    state: directory
+    owner: "root"
+    group: "adm"
+    mode: u+rwx,g-w,o-w
+
+- name: (nginx) installing our custom nginx configuration
+  template:
+    src: "templates/nginx.conf.j2"
+    dest: "/etc/nginx/nginx.conf"
+    owner: "root"
+    group: "root"
+    mode: u+rw,g-wx,o-wx
+
+- name: (sys) start nginx
+  systemd:
+    daemon_reload: true
+    enabled: true
+    masked: false
+    name: "nginx"
+    state: started

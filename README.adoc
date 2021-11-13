@@ -1,0 +1,52 @@
+= README
+
+== Goals
+
+Little Ansible role to install nginx server from official repos, with a custom (and simple) configuration.
+
+== Vars
+
+No variable are used.
+
+== How to use it ?
+
+=== Test it with molecule
+
+Simple ! Use the venv.sh script to enter to the matrix (c).
+
+[source, bash]
+----
+source venv.sh
+----
+
+This virtualenv will bring you needed tools. You will in the virtualenv automatically. You are now ready to create virtual machines.
+
+[source, bash]
+----
+molecule create
+----
+
+And then use the playbook and launch the tests
+
+[source, bash]
+----
+molecule converge && molecule verify
+----
+
+When you're all set, destroy it.
+
+[source, bash]
+----
+molecule destroy
+----
+
+=== Use this role in another ansible playbook
+
+Incorpore this role on your playbook, in the file `requirements.yml` and go !
+
+[source, bash]
+----
+roles:
+  - src: git@github.com:Mettmett/ansible-nginx.git
+    scm: git
+----

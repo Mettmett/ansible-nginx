@@ -1,0 +1,26 @@
+---
+
+- name: Verify
+  hosts: all
+  become: true
+  tasks:
+  - name: (check) Test nginx configuration
+    command: "nginx -t"
+    changed_when: false
+
+  - name: (check) Test if nginx service is up
+    systemd:
+      enabled: true
+      masked: false
+      name: "nginx"
+      state: started
+
+  - name: (check) Test if nginx web port is open and reachable
+    wait_for:
+      port: 80
+      delay: 2
+
+  - name: (check) Test if ngix web interface is accessible
+    uri:
+      status_code: 200
+      url: "http://localhost"
